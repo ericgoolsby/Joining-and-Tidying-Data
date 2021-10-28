@@ -1,0 +1,316 @@
+---
+title: "Data Tidying Lecture Code and Questions"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Adapted from UO Psych R Bootcamp: <https://uopsych-r-bootcamp-2020.netlify.app/post/08-tidyr/>
+
+## Instructions
+
+- Open the visual markdown editor.
+- Run the code chunk below. You may need to `install.packages("nycflights13")` first.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(nycflights13)
+
+flights2 <- flights %>% 
+  select(year:day, hour, origin, dest, tailnum, carrier)
+
+```
+
+---
+
+**left_join example 1**
+
+```{r}
+flights2 %>%
+  left_join(airlines, by = "carrier")
+```
+
+**left_join equivalent using base R subsetting**
+
+```{r}
+tibble(flights2,
+       name = airlines$name[match(flights2$carrier, airlines$carrier)])
+```
+
+---
+
+**inner_join example 1**
+
+```{r}
+x <- tribble(
+  ~key, ~val_x,
+     1, "x1",
+     2, "x2",
+     3, "x3"
+)
+y <- tribble(
+  ~key, ~val_y,
+     1, "y1",
+     2, "y2",
+     4, "y3"
+)
+
+x %>% 
+  inner_join(y, by = "key")
+```
+
+---
+
+**left_join example 2**
+
+```{r}
+    x <- tribble(
+      ~key, ~val_x,
+         1, "x1",
+         2, "x2",
+         2, "x3",
+         1, "x4"
+    )
+    y <- tribble(
+      ~key, ~val_y,
+         1, "y1",
+         2, "y2"
+    )
+    left_join(x, y, by = "key")
+```
+
+---
+
+**left_join example 3**
+
+```{r}
+flights2 %>% 
+      left_join(weather)
+```
+
+---
+
+**left_join example 4**
+
+```{r}
+flights2 %>% 
+  left_join(planes, by = "tailnum")
+```
+
+---
+
+*left_join example 5*
+
+Map destination airport (dest) to faa:
+
+```{r}
+flights2 %>% 
+  left_join(airports, c("dest" = "faa"))
+```
+
+
+
+Map origin airport to faa:
+
+```{r}
+flights2 %>% 
+  left_join(airports, c("origin" = "faa"))
+```
+
+---
+
+*semi_join example 1*
+
+```{r}
+top_dest <- flights %>%
+  count(dest, sort = TRUE) %>%
+  head(10)
+
+top_dest
+```
+
+
+```{r}
+flights %>% 
+  filter(dest %in% top_dest$dest)
+```
+
+
+```{r}
+flights %>% 
+  semi_join(top_dest)
+```
+
+
+```{r}
+flights %>% 
+  semi_join(top_dest)
+```
+
+---
+
+**anti_join example 1**
+
+```{r}
+flights %>%
+  anti_join(planes, by = "tailnum") %>%
+  count(tailnum, sort = TRUE)
+```
+
+---
+
+**Set operations example**
+
+```{r}
+df1 <- tribble(
+  ~x, ~y,
+   1,  1,
+   2,  1
+)
+df2 <- tribble(
+  ~x, ~y,
+   1,  1,
+   1,  2
+)
+
+df1
+
+df2
+```
+
+```{r}
+intersect(df1, df2)
+
+union(df1, df2)
+
+setdiff(df1, df2)
+
+setdiff(df2, df1)
+```
+
+---
+
+**pivot_longer()**
+
+```{r}
+table4a %>% 
+  pivot_longer(cols = c(`1999`, `2000`),
+               names_to = "year", 
+               values_to = "cases")
+```
+
+---
+
+**Your Turn 1**
+
+```{r}
+# Q1.
+
+ps_data <- rio::import("data/pragmatic_scales_data.csv") %>% 
+  as_tibble()
+```
+
+
+```{r}
+#Q2.
+
+```
+
+
+```{r}
+#Q3.
+
+```
+
+---
+
+**separate and unite example 1**
+
+```{r}
+table3
+```
+
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population"))
+```
+
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population"), convert = TRUE)
+```
+
+
+```{r}
+table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2)
+```
+
+
+```{r}
+table5 %>% 
+  unite(new, century, year)
+```
+
+
+```{r}
+table5 %>% 
+  unite(new, century, year, sep = "")
+```
+
+---
+
+**Missing values example 1**
+
+```{r}
+stocks <- tibble(
+  year   = c(2015, 2015, 2015, 2015, 2016, 2016, 2016),
+  qtr    = c(   1,    2,    3,    4,    2,    3,    4),
+  return = c(1.88, 0.59, 0.35,   NA, 0.92, 0.17, 2.66)
+)
+
+stocks
+```
+
+
+```{r}
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return)
+```
+
+
+```{r}
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return) %>% 
+  pivot_longer(
+    cols = c(`2015`, `2016`), 
+    names_to = "year", 
+    values_to = "return", 
+    values_drop_na = TRUE
+  )
+```
+
+---
+
+**Missing values example 2**
+
+```{r}
+treatment <- tribble(
+  ~ person,           ~ treatment, ~response,
+  "Derrick Whitmore", 1,           7,
+  NA,                 2,           10,
+  NA,                 3,           9,
+  "Katherine Burke",  1,           4
+)
+
+treatment
+```
+
+
+```{r}
+stocks %>% 
+  complete(year, qtr)
+```
